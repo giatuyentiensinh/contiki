@@ -9,9 +9,26 @@
 #define UIP_CONF_MAX_ROUTES 0 /* No need for routes */
 #undef RPL_CONF_MOP
 #define RPL_CONF_MOP RPL_MOP_NON_STORING /* Mode of operation*/
-#undef ORCHESTRA_CONF_RULES
-#define ORCHESTRA_CONF_RULES { &eb_per_time_source, &unicast_per_neighbor_rpl_ns, &default_common } /* Orchestra in non-storing */
 
+#undef UIP_CONF_TCP
+#define UIP_CONF_TCP 0
+#undef QUEUEBUF_CONF_NUM
+#define QUEUEBUF_CONF_NUM 3
+#undef RPL_NS_CONF_LINK_NUM
+#undef NBR_TABLE_CONF_MAX_NEIGHBORS
+#undef UIP_CONF_ND6_SEND_NS
+#define UIP_CONF_ND6_SEND_NS 0
+#undef SICSLOWPAN_CONF_FRAG
+
+#if RPL_CONF_MOP == 2
+#define RPL_NS_CONF_LINK_NUM  4
+#define NBR_TABLE_CONF_MAX_NEIGHBORS 4
+#define SICSLOWPAN_CONF_FRAG 1
+#else
+#define RPL_NS_CONF_LINK_NUM  8
+#define NBR_TABLE_CONF_MAX_NEIGHBORS 8
+#define SICSLOWPAN_CONF_FRAG 0
+#endif
 /*******************************************************/
 /********************* Enable TSCH *********************/
 /*******************************************************/
@@ -62,9 +79,5 @@
 #undef TSCH_SCHEDULE_CONF_DEFAULT_LENGTH
 #define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 3
 
-#if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_ZOUL || \
-  CONTIKI_TARGET_OPENMOTE_CC2538
 #define TSCH_CONF_HW_FRAME_FILTERING    0
-#endif /* CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_ZOUL \
-       || CONTIKI_TARGET_OPENMOTE_CC2538 */
 #endif /* __PROJECT_CONF_H__ */

@@ -146,7 +146,7 @@ PROCESS_THREAD(node_process, ev, data)
   static struct etimer periodic;
 
   PROCESS_BEGIN();
-  
+
   static int is_coordinator = 0;
   static enum { role_6ln, role_6dr } node_role;
   node_role = role_6ln;
@@ -155,7 +155,7 @@ PROCESS_THREAD(node_process, ev, data)
   etimer_set(&et, CLOCK_SECOND * CONFIG_WAIT_TIME);
 
   while(!etimer_expired(&et)) {
-    printf("Init: current role: %s. Will start in %u seconds. Press user button to toggle mode.\n",
+    printf("Init: current role: " ANSI_COLOR_RED " %s " ANSI_COLOR_RESET ". Will start in %u seconds. Press user button to toggle mode.\n",
            node_role == role_6ln ? "6ln" : "6dr", CONFIG_WAIT_TIME);
     PROCESS_WAIT_EVENT_UNTIL(((ev == sensors_event) &&
                               (data == &button_sensor) && button_sensor.value(0) > 0)
@@ -166,7 +166,7 @@ PROCESS_THREAD(node_process, ev, data)
     }
   }
 
-  printf("Init: node starting with role %s\n",
+  printf(ANSI_COLOR_RED "Init: node starting with role %s\n" ANSI_COLOR_RESET,
          node_role == role_6ln ? "6ln" : "6dr");
 
   tsch_set_pan_secured(0);
@@ -188,10 +188,10 @@ PROCESS_THREAD(node_process, ev, data)
          UIP_HTONS(server_conn->rport));
 
   } else {
-    net_init(NULL);
     uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+    net_init(NULL);
+    // hard code
     uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0x212, 0x4b00, 0x9df, 0x4f53);
-    // uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
     uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
     uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 
@@ -208,10 +208,9 @@ PROCESS_THREAD(node_process, ev, data)
   }
 
   /* Print out routing tables every minute */
-  etimer_set(&et, CLOCK_SECOND * 60);
   etimer_set(&periodic, 15 * 128UL);
 
-  if (is_coordinator) 
+  if (is_coordinator)
     while(1) {
       PROCESS_YIELD();
       if (ev == tcpip_event)
@@ -221,11 +220,13 @@ PROCESS_THREAD(node_process, ev, data)
         print_network_status();
       }
     }
-  else 
+  else
     while(1) {
       PROCESS_YIELD();
       if (ev == tcpip_event)
         tcpip_handler();
+      if (ev == sensors_event && data == &button_sensor)
+        send_packet();
       if (etimer_expired(&periodic)) {
         etimer_reset(&periodic);
         send_packet();

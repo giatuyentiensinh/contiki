@@ -11,7 +11,7 @@
 #include "net/ipv6/uip-ds6-route.h"
 #include "dev/adc-zoul.h"
 #include "dev/zoul-sensors.h"
-#include "dev/sht25.h"
+#include "dev/dht22.h"
 
 #define DEBUG DEBUG_FULL
 #include "net/ip/uip-debug.h"
@@ -36,8 +36,8 @@ struct my_msg_t {
   uint16_t adc3;
   uint16_t temp;
   uint16_t battery;
-  uint16_t sensor_temp;
-  uint16_t sensor_humi;
+  int sensor_temp;
+  int sensor_humi;
 };
 
 static struct my_msg_t msg;
@@ -64,8 +64,7 @@ send_packet(void)
   msg.adc3        = adc_zoul.value(ZOUL_SENSORS_ADC3);
   msg.temp        = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
   msg.battery     = vdd3_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
-  msg.sensor_temp = sht25.value(SHT25_VAL_TEMP);
-  msg.sensor_humi = sht25.value(SHT25_VAL_HUM);
+  dht22_read_all(&msg.sensor_temp, &msg.sensor_humi);
 
   PRINTF("DATA send " ANSI_COLOR_BLUE "adc1: %u, adc2: %u, adc3: %u, temp: %u, battery: %u, sensor_temp: %u, sensor_humi: %u" ANSI_COLOR_RESET "\n", 
     msg.adc1, msg.adc2, msg.adc3, msg.temp, msg.battery, msg.sensor_temp, msg.sensor_humi);
@@ -100,14 +99,14 @@ print_local_addresses(void)
   PRINTF(ANSI_COLOR_RESET);
 }
 /*---------------------------------------------------------------------------*/
-static void     
+static void
 set_global_address(void)
 {
   uip_ipaddr_t ipaddr;
 
   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);  
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_sensor_process, ev, data)
@@ -120,7 +119,7 @@ PROCESS_THREAD(udp_client_sensor_process, ev, data)
   set_global_address();
 
   uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
-  
+
   PRINTF("Server address: ");
   PRINT6ADDR(&server_ipaddr);
   PRINTF("\n");
@@ -129,16 +128,16 @@ PROCESS_THREAD(udp_client_sensor_process, ev, data)
 
   /* Activate the sensors */
   adc_zoul.configure(SENSORS_HW_INIT, ZOUL_SENSORS_ADC_ALL);
-  sht25.configure(SHT25_RESOLUTION, SHT2X_RES_14T_12RH);
+  SENSORS_ACTIVATE(dht22);
   uart_set_input(1, serial_line_input_byte);
 
   /* new connection with remote host */
-  client_conn = udp_new(NULL, UIP_HTONS(UDP_SERVER_PORT), NULL); 
+  client_conn = udp_new(NULL, UIP_HTONS(UDP_SERVER_PORT), NULL);
   if(client_conn == NULL) {
     PRINTF("No UDP connection available, exiting the process!\n");
     PROCESS_EXIT();
   }
-  udp_bind(client_conn, UIP_HTONS(UDP_CLIENT_PORT)); 
+  udp_bind(client_conn, UIP_HTONS(UDP_CLIENT_PORT));
 
   PRINTF("Created a connection with the server ");
   PRINT6ADDR(&client_conn->ripaddr);
@@ -153,7 +152,7 @@ PROCESS_THREAD(udp_client_sensor_process, ev, data)
     }
 
     if(ev == serial_line_event_message && data != NULL) {
-      send_packet();      
+      send_packet();
     }
 
     if(etimer_expired(&periodic)) {

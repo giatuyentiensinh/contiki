@@ -1,6 +1,5 @@
 #include "contiki.h"
 #include <stdio.h>
-#include "dev/leds.h"
 #include "sys/etimer.h"
 
 /* These library allows to use the on-board sensors */
@@ -32,7 +31,6 @@ PROCESS_THREAD(onboard_sensors_process, ev, data)
 
     temp = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
     printf("Core temperature = %d.%u C\n", temp / 1000, temp % 1000);
-
 
     etimer_reset(&et);
   }

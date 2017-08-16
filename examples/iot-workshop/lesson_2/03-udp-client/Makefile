@@ -2,7 +2,7 @@ all: udp-client udp-client-sensor
 CONTIKI=../../../..
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
-CONTIKI_TARGET_SOURCEFILES += sht25.c
+CONTIKI_TARGET_SOURCEFILES += dht22.c
 
 include $(CONTIKI)/Makefile.include
 

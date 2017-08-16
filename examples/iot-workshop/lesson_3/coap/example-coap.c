@@ -6,6 +6,7 @@
 #include "rest-engine.h"
 #include "dev/adc-zoul.h"
 #include "dev/button-sensor.h"
+#include "dev/dht22.h"
 #include "dev/gpio.h"
 
 #define DEBUG 1
@@ -30,7 +31,7 @@ extern resource_t
   res_event_button,
   res_sub,
   res_zoul,
-  res_sht25,
+  res_dht22,
   res_gpio,
   res_tracking_temp;
 
@@ -45,6 +46,9 @@ PROCESS_THREAD(er_example_server, ev, data)
 
   /* ADC zoul configure */
   adc_zoul.configure(SENSORS_HW_INIT, ZOUL_SENSORS_ADC_ALL);
+
+  /* Enable sensor dht22 */
+  SENSORS_ACTIVATE(dht22);
 
   /* GPIO PIN configure */
   GPIO_SOFTWARE_CONTROL(EXAMPLE_PORT_BASE, EXAMPLE_PIN_MASK);
@@ -67,7 +71,7 @@ PROCESS_THREAD(er_example_server, ev, data)
   rest_activate_resource(&res_event_button, "actuators/event_button");
   rest_activate_resource(&res_sub, "test/sub");
   rest_activate_resource(&res_zoul, "sensors/zoul");
-  rest_activate_resource(&res_sht25, "sensors/sht25");
+  rest_activate_resource(&res_dht22, "sensors/dht22");
   rest_activate_resource(&res_gpio, "sensors/gpio");
   rest_activate_resource(&res_tracking_temp, "sensors/tempOnBoard");
 

@@ -16,7 +16,7 @@ SMALL=1
 APPS += er-coap
 APPS += rest-engine
 
-CONTIKI_TARGET_SOURCEFILES += sht25.c
+CONTIKI_TARGET_SOURCEFILES += dht22.c
 
 CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
