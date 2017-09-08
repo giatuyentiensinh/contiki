@@ -17,3 +17,6 @@
 [submodule "tools/sensniff"]
 	path = tools/sensniff
 	url = https://github.com/g-oikonomou/sensniff.git
+[submodule "apps/tinydtls"]
+	path = apps/tinydtls
+	url = https://github.com/cetic/tinydtls.git
