@@ -429,7 +429,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 				  PRINTF("DEBUG: Client set connection to: ");
 				  PRINT6ADDR(&dst.addr);
 				  PRINTF(":%d\n", uip_ntohs(dst.port));
-				  dtls_connect(dtls_context, &dst) >= 0;
+				  dtls_connect(dtls_context, &dst);
 			  } else
 				  try_send(dtls_context, &dst);
 			  

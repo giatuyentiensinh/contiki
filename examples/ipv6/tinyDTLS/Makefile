@@ -4,7 +4,7 @@
 
 all: dtls-client dtls-server
 
-CONTIKI=../../../..
+CONTIKI=../../..
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 

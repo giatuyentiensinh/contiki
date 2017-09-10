@@ -44,7 +44,6 @@
 #ifndef PROJECT_IPHC_TINYDTLS_CONF_H_
 #define PROJECT_IPHC_TINYDTLS_CONF_H_
 
-
 /*  
  *  Basic configuration for the nodes. 
  *  802.15.4 for the framers. 

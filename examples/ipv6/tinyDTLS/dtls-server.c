@@ -30,7 +30,9 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
-
+#include "dev/uart.h"
+#include "dev/serial-line.h"
+#include "dev/leds.h"
 
 #include <string.h>
 
@@ -289,12 +291,14 @@ print_local_addresses(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
 {
+  char *rxdata;
   PROCESS_BEGIN();
 
   dtls_init();
   init_dtls();
 
   print_local_addresses();
+  uart_set_input(1, serial_line_input_byte);
 
   if (!dtls_context) {
     dtls_emerg("cannot create context\n");
@@ -306,10 +310,17 @@ PROCESS_THREAD(udp_server_process, ev, data)
 #endif
 
   while(1) {
-    PROCESS_WAIT_EVENT();
+//    PROCESS_WAIT_EVENT();
+    PROCESS_YIELD();
     if(ev == tcpip_event) {
       dtls_handle_read(dtls_context);
     }
+    printf("ev = %d\n", ev);
+    if(ev == serial_line_event_message) {
+	  rxdata = data;
+	  leds_toggle(LEDS_RED);
+	  printf("Data received over UART %s\n", rxdata);
+	}
   }
 
   PROCESS_END();
