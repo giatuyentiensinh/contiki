@@ -76,7 +76,8 @@
 
 #define MAX_PAYLOAD_LEN 120
 
-#define REMOTE_PORT     UIP_HTONS(20220)
+#define DTLS_SERVER_PORT     UIP_HTONS(20220)
+#define DTLS_CLIENT_PORT     UIP_HTONS(20221)
 
 /* Odly, the original Contiki's examples put this as global.  */
 static struct etimer pt_timer;
@@ -338,20 +339,22 @@ PRINTF("\n");
 
   /*Different scope addresses*/
   uip_ipaddr_t ipaddr;
-//  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 3);
-uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 3);
+  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 3);
   //uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
   
   print_local_addresses();
 
-  
+  uip_ipaddr_t ipaddrServer;
+  uip_ip6addr(&ipaddrServer, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 2);
+
+  dst->addr = ipaddrServer;
   dst->size = sizeof(dst->addr) + sizeof(dst->port);
-  dst->port = UIP_HTONS(20220);
+  dst->port = DTLS_SERVER_PORT;
 
   set_connection_address(&dst->addr);
   client_conn = udp_new(&dst->addr, dst->port, NULL);
-  udp_bind(client_conn, UIP_HTONS(20221));
+  udp_bind(client_conn, DTLS_CLIENT_PORT);
 
   PRINTF("Set conn to: ");
   PRINT6ADDR(&client_conn->ripaddr);

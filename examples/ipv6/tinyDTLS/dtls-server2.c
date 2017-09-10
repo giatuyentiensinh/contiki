@@ -231,19 +231,9 @@ PRINTF("\n");
   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 2);
   //uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-
-  struct uip_ds6_addr *root_if = uip_ds6_addr_lookup(&ipaddr);
-  if(root_if != NULL) {
-    rpl_dag_t *dag;
-    dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)&ipaddr);
-    rpl_set_prefix(dag, &ipaddr, 64);
-    PRINTF("created a new RPL dag\n");
-  } else {
-    PRINTF("failed to create a new RPL DAG\n");
-  }
   
   /*The server must be ready to accept any */
-  server_conn = udp_new(NULL, DTLS_CLIENT_PORT, NULL);
+  server_conn = udp_new(NULL, 0, NULL);
   udp_bind(server_conn, DTLS_SERVER_PORT);
 
   dtls_set_log_level(DTLS_LOG_NOTICE);
