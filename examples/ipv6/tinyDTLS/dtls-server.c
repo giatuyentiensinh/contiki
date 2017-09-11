@@ -1,9 +1,7 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
-#include "dev/uart.h"
-#include "dev/serial-line.h"
-#include "dev/leds.h"
+#include "net/rpl/rpl.h"
 
 #include <string.h>
 
@@ -13,13 +11,7 @@
 #define DEBUG DEBUG_PRINT
 #endif
 #include "net/ip/uip-debug.h"
-
-/* Used for testing different TinyDTLS versions */
-#if  1
-#include "dtls_debug.h" 
-#else
-#include "debug.h" 
-#endif
+#include "dtls_debug.h"
 #include "dtls.h"
 
 #ifdef ENABLE_POWERTRACE
@@ -30,9 +22,6 @@
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
 
 #define MAX_PAYLOAD_LEN 120
-
-#define DTLS_SERVER_PORT     UIP_HTONS(20220)
-#define DTLS_CLIENT_PORT     UIP_HTONS(20221)
 
 static struct uip_udp_conn *server_conn;
 
@@ -64,7 +53,7 @@ read_from_peer(struct dtls_context_t *ctx,
     PRINTF("%c", data[i]);
 
   /* echo incoming application data */
-   dtls_write(ctx, session, data, len);
+  dtls_write(ctx, session, data, len);
   return 0;
 }
 
@@ -163,19 +152,6 @@ verify_ecdsa_key(struct dtls_context_t *ctx,
 }
 #endif /* DTLS_ECC */
 
-/*---------------------------------------------------------------------------*/
-int
-on_event(struct dtls_context_t *ctx, session_t *session, dtls_alert_level_t level,
-              unsigned short code) {
-  if (code == DTLS_EVENT_CONNECTED) {
-//     dtls_connected = 1;
-    PRINTF("DTLS-Server Connected\n");
-  }
-  return 0;
-}
-/*---------------------------------------------------------------------------*/
-
-
 PROCESS(udp_server_process, "UDP server process");
 AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
@@ -188,71 +164,9 @@ dtls_handle_read(dtls_context_t *ctx) {
     session.port = UIP_UDP_BUF->srcport;
     session.size = sizeof(session.addr) + sizeof(session.port);
     
-    PRINTF("Server received message from ");
-    PRINT6ADDR(&session.addr);
-    PRINTF(":%d uip_datalen %d\n", uip_ntohs(session.port),uip_datalen());
     dtls_handle_message(ctx, &session, uip_appdata, uip_datalen());
   }
 }
-
-void init_dtls() {
-		
-  static dtls_handler_t cb = {
-    .write = send_to_peer,
-    .read  = read_from_peer,
-    .event = on_event,
-#ifdef DTLS_PSK
-    .get_psk_info = get_psk_info,
-#endif /* DTLS_PSK */
-#ifdef DTLS_ECC
-    .get_ecdsa_key = get_ecdsa_key,
-    .verify_ecdsa_key = verify_ecdsa_key
-#endif /* DTLS_ECC */
-  };
-
-  
-
-  PRINTF("DTLS server (%s) started\n", PACKAGE_STRING);
-
-#ifdef DTLS_PSK
-PRINTF("PSK-");
-#endif  
-#ifdef DTLS_ECC
-PRINTF("ECC");
-#endif  
-PRINTF("\n");
-
-
-//  memset(&tmp_addr, 0, sizeof(rimeaddr_t));
-//  if(get_eui64_from_eeprom(tmp_addr.u8));
-
-  /*Different scope addresses*/
-  uip_ipaddr_t ipaddr;
-  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 2);
-  //uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-
-  struct uip_ds6_addr *root_if = uip_ds6_addr_lookup(&ipaddr);
-  if(root_if != NULL) {
-    rpl_dag_t *dag;
-    dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)&ipaddr);
-    rpl_set_prefix(dag, &ipaddr, 64);
-    PRINTF("created a new RPL dag\n");
-  } else {
-    PRINTF("failed to create a new RPL DAG\n");
-  }
-  
-  /*The server must be ready to accept any */
-  server_conn = udp_new(NULL, DTLS_CLIENT_PORT, NULL);
-  udp_bind(server_conn, DTLS_SERVER_PORT);
-
-  dtls_set_log_level(DTLS_LOG_NOTICE);
-
-  dtls_context = dtls_new_context(server_conn);
-  if (dtls_context)
-    dtls_set_handler(dtls_context, &cb);
-}
-
 /*---------------------------------------------------------------------------*/
 static void
 print_local_addresses(void)
@@ -271,18 +185,78 @@ print_local_addresses(void)
   }
 }
 
+static void
+create_rpl_dag(uip_ipaddr_t *ipaddr)
+{
+  struct uip_ds6_addr *root_if;
+
+  root_if = uip_ds6_addr_lookup(ipaddr);
+  if(root_if != NULL) {
+    rpl_dag_t *dag;
+    uip_ipaddr_t prefix;
+    
+    rpl_set_root(RPL_DEFAULT_INSTANCE, ipaddr);
+    dag = rpl_get_any_dag();
+    uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+    rpl_set_prefix(dag, &prefix, 64);
+    PRINTF("created a new RPL dag\n");
+  } else {
+    PRINTF("failed to create a new RPL DAG\n");
+  }
+}
+
+void
+init_dtls() {
+  static dtls_handler_t cb = {
+    .write = send_to_peer,
+    .read  = read_from_peer,
+    .event = NULL,
+#ifdef DTLS_PSK
+    .get_psk_info = get_psk_info,
+#endif /* DTLS_PSK */
+#ifdef DTLS_ECC
+    .get_ecdsa_key = get_ecdsa_key,
+    .verify_ecdsa_key = verify_ecdsa_key
+#endif /* DTLS_ECC */
+  };
+
+  uip_ipaddr_t ipaddr;
+  /* struct uip_ds6_addr *root_if; */
+
+  PRINTF("DTLS server started\n");
+
+/*   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0); */
+/*   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr); */
+/*   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF); */
+
+/*   create_rpl_dag(&ipaddr); */
+/* #else */
+  /* uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF); */
+
+  uip_ip6addr(&ipaddr, 0xaaaa, 0,0,0,0x0200,0,0,0x0003);
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+
+  create_rpl_dag(&ipaddr);
+
+  server_conn = udp_new(NULL, 0, NULL);
+  udp_bind(server_conn, UIP_HTONS(20220));
+
+  dtls_set_log_level(DTLS_LOG_DEBUG);
+
+  dtls_context = dtls_new_context(server_conn);
+  if (dtls_context)
+    dtls_set_handler(dtls_context, &cb);
+}
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
 {
-  char *rxdata;
   PROCESS_BEGIN();
 
   dtls_init();
   init_dtls();
 
   print_local_addresses();
-  uart_set_input(1, serial_line_input_byte);
 
   if (!dtls_context) {
     dtls_emerg("cannot create context\n");
@@ -294,17 +268,18 @@ PROCESS_THREAD(udp_server_process, ev, data)
 #endif
 
   while(1) {
-//    PROCESS_WAIT_EVENT();
-    PROCESS_YIELD();
+    PROCESS_WAIT_EVENT();
     if(ev == tcpip_event) {
+      PRINTF("============================\n");
       dtls_handle_read(dtls_context);
     }
-    printf("ev = %d\n", ev);
-    if(ev == serial_line_event_message) {
-	  rxdata = data;
-	  leds_toggle(LEDS_RED);
-	  printf("Data received over UART %s\n", rxdata);
-	}
+#if 0
+    if (bytes_read > 0) {
+      /* dtls_handle_message(dtls_context, &the_session, readbuf, bytes_read); */
+      read_from_peer(dtls_context, &the_session, readbuf, bytes_read);
+    }
+    dtls_handle_message(ctx, &session, uip_appdata, bytes_read);
+#endif
   }
 
   PROCESS_END();

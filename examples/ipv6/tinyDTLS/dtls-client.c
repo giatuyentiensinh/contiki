@@ -1,32 +1,3 @@
-/*
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This file is part of the Contiki operating system.
- *
- */
-
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
@@ -42,20 +13,7 @@
 #endif
 #include "net/ip/uip-debug.h"
 
-/*TESTING: Fast disable of the PRINTF */
-#ifdef PRINTF
-#if 0
-#undef PRINTF
-#define PRINTF
-#endif
-#endif
-
-/* Used for testing different TinyDTLS versions */
-#if  1
-#include "dtls_debug.h" 
-#else
-#include "debug.h" 
-#endif
+#include "dtls_debug.h"
 #include "dtls.h"
 
 #ifdef DTLS_PSK
@@ -76,19 +34,10 @@
 
 #define MAX_PAYLOAD_LEN 120
 
-#define DTLS_SERVER_PORT     UIP_HTONS(20220)
-#define DTLS_CLIENT_PORT     UIP_HTONS(20221)
-
-/* Odly, the original Contiki's examples put this as global.  */
-static struct etimer pt_timer;
-
 static struct uip_udp_conn *client_conn;
 static dtls_context_t *dtls_context;
-/* WARNING: buflen must be the size of buf[]*/
-static char buf[] = "This is a quick test\0";
-static size_t buflen = 21;
-
-static uint8_t connected = 0;
+static char buf[200];
+static size_t buflen = 0;
 
 static const unsigned char ecdsa_priv_key[] = {
 			0x41, 0xC1, 0xCB, 0x6B, 0x51, 0x24, 0x7A, 0x14,
@@ -111,12 +60,6 @@ static const unsigned char ecdsa_pub_key_y[] = {
 static void
 try_send(struct dtls_context_t *ctx, session_t *dst) {
   int res;
-  
-  /*TESTING: Remove once everything works */
-   PRINTF("TRY_SEND: Session - ");
-   PRINT6ADDR(&dst->addr);
-   PRINTF(":%u -\n", uip_ntohs(dst->port));
-  
   res = dtls_write(ctx, dst, (uint8 *)buf, buflen);
   if (res >= 0) {
     memmove(buf, buf + res, buflen - res);
@@ -125,37 +68,27 @@ try_send(struct dtls_context_t *ctx, session_t *dst) {
 }
 
 static int
-read_from_peer_client(struct dtls_context_t *ctx, 
+read_from_peer(struct dtls_context_t *ctx, 
 	       session_t *session, uint8 *data, size_t len) {
   size_t i;
-  
-  /* HERE YOU HAS VALID DATA */
-  
-  PRINTF("DATA RCV: ");
   for (i = 0; i < len; i++)
     PRINTF("%c", data[i]);
-  PRINTF("\n");
   return 0;
 }
 
 static int
-send_to_peer_client(struct dtls_context_t *ctx, 
+send_to_peer(struct dtls_context_t *ctx, 
 	     session_t *session, uint8 *data, size_t len) {
 
   struct uip_udp_conn *conn = (struct uip_udp_conn *)dtls_get_app_data(ctx);
 
-
-   /* TO THELL! This will be more closed to RIOT !*/
   uip_ipaddr_copy(&conn->ripaddr, &session->addr);
   conn->rport = session->port;
 
-   /* DEBUGGING */
-   PRINTF("SEND_TO_PEER: Session: ");
-   PRINT6ADDR(&session->addr);
-   PRINTF(" - ripaddr: ");
-   PRINT6ADDR(&conn->ripaddr);
-   PRINTF(" - PORT: %u\n", uip_ntohs(session->port));
-   
+  PRINTF("send to ");
+  PRINT6ADDR(&conn->ripaddr);
+  PRINTF(":%u\n", uip_ntohs(conn->rport));
+
   uip_udp_packet_send(conn, data, len);
 
   /* Restore server connection to allow data from any node */
@@ -242,7 +175,8 @@ verify_ecdsa_key(struct dtls_context_t *ctx,
 }
 #endif /* DTLS_ECC */
 
-
+PROCESS(udp_server_process, "UDP server process");
+AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
 static void
 dtls_handle_read(dtls_context_t *ctx) {
@@ -261,29 +195,6 @@ dtls_handle_read(dtls_context_t *ctx) {
     dtls_handle_message(ctx, &session, uip_appdata, uip_datalen());
   }
 }
-
-/*---------------------------------------------------------------------------*/
-int
-on_event(struct dtls_context_t *ctx, session_t *session, dtls_alert_level_t level,
-              unsigned short code) {
-  if (code == DTLS_EVENT_CONNECTED) {
-#if WITH_ENERGY_EST_DTLS_HS_C
-  cpu_time = energest_type_time(ENERGEST_TYPE_CPU) - cpu_start_time;
-  lpm_time = energest_type_time(ENERGEST_TYPE_LPM) - lpm_start_time;
-  tx_time = energest_type_time(ENERGEST_TYPE_TRANSMIT) - tx_start_time;
-  rx_time = energest_type_time(ENERGEST_TYPE_LISTEN) - rx_start_time;
-  printf("Energy (DTLS_HS_C_0) cpu %lu lpm %lu tx %lu rx %lu\n",
-          cpu_time,
-          lpm_time,
-          tx_time,
-          rx_time);
-#endif /* WITH_ENERGY_EST_DTLS_HS_C */
-    connected = 1;
-    PRINTF("DTLS-Client Connected\n");
-  }
-  return 0;
-}
-
 /*---------------------------------------------------------------------------*/
 static void
 print_local_addresses(void)
@@ -305,19 +216,15 @@ print_local_addresses(void)
 static void
 set_connection_address(uip_ipaddr_t *ipaddr)
 {
-  /*
-   * NOTE: For this test we use directly a static IPv6 Add. 
-   */
-  uip_ip6addr(ipaddr,0xfe80,0,0,0,0x0200,0x0000,0x0000,0x0002);
-  //uip_ip6addr(ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 2);
+  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
 }
 
 void
 init_dtls(session_t *dst) {
   static dtls_handler_t cb = {
-    .write = send_to_peer_client,
-    .read  = read_from_peer_client,
-    .event = on_event,
+    .write = send_to_peer,
+    .read  = read_from_peer,
+    .event = NULL,
 #ifdef DTLS_PSK
     .get_psk_info = get_psk_info,
 #endif /* DTLS_PSK */
@@ -326,61 +233,34 @@ init_dtls(session_t *dst) {
     .verify_ecdsa_key = verify_ecdsa_key
 #endif /* DTLS_ECC */
   };
-    
-  PRINTF("DTLS client ( %s ) started\n", PACKAGE_STRING);
-#ifdef DTLS_PSK
-PRINTF("PSK-");
-#endif  
-#ifdef DTLS_ECC
-PRINTF("ECC");
-#endif  
-PRINTF("\n");
+  PRINTF("DTLS client started\n");
 
-
-  /*Different scope addresses*/
-  uip_ipaddr_t ipaddr;
-  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 3);
-  //uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-  
   print_local_addresses();
 
-  uip_ipaddr_t ipaddrServer;
-  uip_ip6addr(&ipaddrServer, 0xaaaa, 0, 0, 0, 0x0200, 0, 0, 2);
-
-  dst->addr = ipaddrServer;
   dst->size = sizeof(dst->addr) + sizeof(dst->port);
-  dst->port = DTLS_SERVER_PORT;
+  dst->port = UIP_HTONS(20220);
 
   set_connection_address(&dst->addr);
-  client_conn = udp_new(&dst->addr, dst->port, NULL);
-  udp_bind(client_conn, DTLS_CLIENT_PORT);
+  client_conn = udp_new(&dst->addr, 0, NULL);
+  udp_bind(client_conn, dst->port);
 
-  PRINTF("Set conn to: ");
-  PRINT6ADDR(&client_conn->ripaddr);
-  PRINTF(":%d ", UIP_HTONS(client_conn->rport));
-  PRINTF("Local port: %d\n", UIP_HTONS(client_conn->lport) );
+  PRINTF("set connection address to ");
+  PRINT6ADDR(&dst->addr);
+  PRINTF(":%d\n", uip_ntohs(dst->port));
 
-  dtls_set_log_level(DTLS_LOG_NOTICE);
+  dtls_set_log_level(DTLS_LOG_DEBUG);
 
   dtls_context = dtls_new_context(client_conn);
-  if (dtls_context){
+  if (dtls_context)
     dtls_set_handler(dtls_context, &cb);
-  }
-  
 }
 
 /*---------------------------------------------------------------------------*/
-
-PROCESS(udp_client_process, "UDP client process");
-AUTOSTART_PROCESSES(&udp_client_process);
-
-PROCESS_THREAD(udp_client_process, ev, data)
+PROCESS_THREAD(udp_server_process, ev, data)
 {
-  
+  static int connected = 0;
   static session_t dst;
-  static int iBool = 1;
-  
+
   PROCESS_BEGIN();
 
   dtls_init();
@@ -389,66 +269,41 @@ PROCESS_THREAD(udp_client_process, ev, data)
   serial_line_init();
 
   if (!dtls_context) {
-    dtls_emerg("can't create context\n");
+    dtls_emerg("cannot create context\n");
     PROCESS_EXIT();
   }
+  static struct etimer periodic;
+  etimer_set(&periodic, 30 * CLOCK_SECOND);
+  while(1) {
+    PROCESS_YIELD();
+    if(ev == tcpip_event) {
+      PRINTF("==============Recv==============\n");
+      dtls_handle_read(dtls_context);
+    }
+//    } else if (ev == serial_line_event_message) {
+    if(etimer_expired(&periodic)) {
+      etimer_reset(&periodic);
+      char *tmp = "ContikiOS";
+      register size_t len = min(strlen(tmp), sizeof(buf) - buflen);
+      memcpy(buf + buflen, tmp, len);
+      buflen += len;
+      if (buflen < sizeof(buf) - 1)
+    	  buf[buflen++] = '\n';	/* serial event does not contain LF */
+    }
 
-  /* 
-   * TESTING: The timer should not be more than 10 seconds
-   * as is the lifetime for any DTLS session. 
-   * HOWEVER, with Cooja I got too many restransmissions 
-   * even with timer greater than 100 seconds. 
-   * 
-   * This should be similar to RIOT: Freeze the client. 
-   * Check if got something and continue (Freeze less than 
-   * 10 seconds otherwise the server will expire the session)
-   * 
-   * HOWEVER, is not happening. PROCESS_WAIT_EVENT_UNTIL
-   * gives a bad performance, and PROCESS_YIELD provokes
-   * A LOT of retransmissions
-   */ 
-  etimer_set(&pt_timer, CLOCK_SECOND*2);
-  while(iBool) {  
-	  
-	  //  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&pt_timer));
-	  PROCESS_YIELD();
-	  
-	  /*WARNING: PROCESS_WAIT_EVENT_UNTIL do not mix with this */
-	  if(etimer_expired(&pt_timer)) {
-		  etimer_reset(&pt_timer);
-	  }
-	  
-	  if(ev == tcpip_event) {
-		  dtls_handle_read(dtls_context);
-	  } else if (ev == PROCESS_EVENT_TIMER) {
-		  
-		  
-		  /*
-		   * TESTING: The original example used an serial connection, for my testing
-		   * is a simple text to transmit (or a CoAP command). 
-		   */
-		  if (buflen) {
-			  if (connected == 0){
-				  PRINTF("DEBUG: Client set connection to: ");
-				  PRINT6ADDR(&dst.addr);
-				  PRINTF(":%d\n", uip_ntohs(dst.port));
-				  dtls_connect(dtls_context, &dst);
-			  } else
-				  try_send(dtls_context, &dst);
-			  
-			  etimer_set(&pt_timer, CLOCK_SECOND * 2);
-			  
-		  } /*IF-buflen*/
-		  else { /*TODO Populated again the buffer (And finish DTLS session) */
-			  iBool = 0;
-		  }
-	  }/*IF-PROCESS_EVENT_TIMER */
-  }/*End while-iBool */
+    if (buflen) {
+    	print_local_addresses();
+      if (!connected) {
+    	  PRINTF("==============Connected==============\n");
+    	  connected = dtls_connect(dtls_context, &dst) >= 0;
+      }
+      else {
+    	  PRINTF("==============Send==============\n");
+          try_send(dtls_context, &dst);
+      }
+    }
+  }
   
-  PRINTF("Client Finished!\n");
-  /*TODO: Release the resources */
-  dtls_free_context(dtls_context);
-  connected = 0;
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
