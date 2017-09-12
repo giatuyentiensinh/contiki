@@ -237,7 +237,7 @@ init_dtls() {
   uip_ip6addr(&ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
 
-  create_rpl_dag(&ipaddr);
+//  create_rpl_dag(&ipaddr);
 
   server_conn = udp_new(NULL, 0, NULL);
   udp_bind(server_conn, UIP_HTONS(20220));
@@ -258,6 +258,7 @@ PROCESS_THREAD(udp_server_process, ev, data)
   init_dtls();
 
   print_local_addresses();
+
   if (!dtls_context) {
     dtls_emerg("cannot create context\n");
     PROCESS_EXIT();

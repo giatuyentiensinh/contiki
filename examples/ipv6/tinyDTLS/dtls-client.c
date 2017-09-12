@@ -202,7 +202,7 @@ print_local_addresses(void)
   int i;
   uint8_t state;
 
-  PRINTF("Client IPv6 addresses: ");
+  PRINTF("Client IPv6 addresses: \n");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
     state = uip_ds6_if.addr_list[i].state;
     if(uip_ds6_if.addr_list[i].isused &&
@@ -216,7 +216,8 @@ print_local_addresses(void)
 static void
 set_connection_address(uip_ipaddr_t *ipaddr)
 {
-  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
+//  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
+  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
 }
 
 void
@@ -234,6 +235,10 @@ init_dtls(session_t *dst) {
 #endif /* DTLS_ECC */
   };
   PRINTF("DTLS client started\n");
+
+//  uip_ipaddr_t ipaddr;
+//  uip_ip6addr(&ipaddr, 0xaaaa, 0,0,0,0x212,0x4b00,0x9df,0x4f53);
+//  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
 
   print_local_addresses();
 
@@ -262,7 +267,6 @@ PROCESS_THREAD(udp_server_process, ev, data)
   static session_t dst;
 
   PROCESS_BEGIN();
-
   dtls_init();
 
   init_dtls(&dst);
