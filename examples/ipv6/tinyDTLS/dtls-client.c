@@ -210,6 +210,7 @@ print_local_addresses(void)
 static void
 set_connection_address(uip_ipaddr_t *ipaddr)
 {
+//	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0,0,0,0x0001);
 //	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
 	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
 //	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x9df,0x4f53);

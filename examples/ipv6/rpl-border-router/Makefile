@@ -37,7 +37,7 @@ CFLAGS += -DWEBSERVER=2
 endif
 
 ifeq ($(PREFIX),)
- PREFIX = fd00::1/64
+ PREFIX = aaaa::1/64
 endif
 
 CONTIKI_WITH_IPV6 = 1
