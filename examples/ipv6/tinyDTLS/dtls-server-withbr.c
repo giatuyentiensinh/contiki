@@ -185,26 +185,6 @@ print_local_addresses(void)
   }
 }
 
-static void
-create_rpl_dag(uip_ipaddr_t *ipaddr)
-{
-  struct uip_ds6_addr *root_if;
-
-  root_if = uip_ds6_addr_lookup(ipaddr);
-  if(root_if != NULL) {
-    rpl_dag_t *dag;
-    uip_ipaddr_t prefix;
-    
-    rpl_set_root(RPL_DEFAULT_INSTANCE, ipaddr);
-    dag = rpl_get_any_dag();
-    uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-    rpl_set_prefix(dag, &prefix, 64);
-    PRINTF("created a new RPL dag\n");
-  } else {
-    PRINTF("failed to create a new RPL DAG\n");
-  }
-}
-
 void
 init_dtls() {
   static dtls_handler_t cb = {
@@ -237,9 +217,7 @@ init_dtls() {
   uip_ip6addr(&ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
 
-//  create_rpl_dag(&ipaddr);
-
-  server_conn = udp_new(NULL, 0, NULL);
+  server_conn = udp_new(NULL, 20000, NULL);
   udp_bind(server_conn, UIP_HTONS(20220));
 
   dtls_set_log_level(DTLS_LOG_DEBUG);

@@ -218,6 +218,7 @@ set_connection_address(uip_ipaddr_t *ipaddr)
 {
 //  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
   uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
+//  uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x9df,0x4f53);
 }
 
 void
@@ -235,10 +236,6 @@ init_dtls(session_t *dst) {
 #endif /* DTLS_ECC */
   };
   PRINTF("DTLS client started\n");
-
-//  uip_ipaddr_t ipaddr;
-//  uip_ip6addr(&ipaddr, 0xaaaa, 0,0,0,0x212,0x4b00,0x9df,0x4f53);
-//  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
 
   print_local_addresses();
 
@@ -267,10 +264,12 @@ PROCESS_THREAD(udp_server_process, ev, data)
   static session_t dst;
 
   PROCESS_BEGIN();
+  PRINTF("\x1b[34m");
   dtls_init();
 
   init_dtls(&dst);
   serial_line_init();
+  PRINTF("\x1b[0m");
 
   if (!dtls_context) {
     dtls_emerg("cannot create context\n");
@@ -281,31 +280,33 @@ PROCESS_THREAD(udp_server_process, ev, data)
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
+      PRINTF("\x1b[34m");
       PRINTF("==============Recv==============\n");
       dtls_handle_read(dtls_context);
+      PRINTF("\x1b[0m");
     }
 //    } else if (ev == serial_line_event_message) {
     if(etimer_expired(&periodic)) {
       etimer_reset(&periodic);
-      char *tmp = "ContikiOS";
+      char *tmp = "ContikiOS\n";
       register size_t len = min(strlen(tmp), sizeof(buf) - buflen);
       memcpy(buf + buflen, tmp, len);
       buflen += len;
       if (buflen < sizeof(buf) - 1)
     	  buf[buflen++] = '\n';	/* serial event does not contain LF */
     }
+	if (buflen) {
+		print_local_addresses();
+	  if (!connected) {
+		  PRINTF("==============Connected==============\n");
+		  connected = dtls_connect(dtls_context, &dst) >= 0;
+	  }
+	  else {
+		  PRINTF("==============Send==============\n");
+		  try_send(dtls_context, &dst);
+	  }
+	}
 
-    if (buflen) {
-    	print_local_addresses();
-      if (!connected) {
-    	  PRINTF("==============Connected==============\n");
-    	  connected = dtls_connect(dtls_context, &dst) >= 0;
-      }
-      else {
-    	  PRINTF("==============Send==============\n");
-          try_send(dtls_context, &dst);
-      }
-    }
   }
   
   PROCESS_END();

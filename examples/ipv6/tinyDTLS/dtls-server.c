@@ -173,7 +173,7 @@ print_local_addresses(void)
 {
   int i;
   uint8_t state;
-
+  PRINTF("\x1b[31m");
   PRINTF("Server IPv6 addresses: \n");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
     state = uip_ds6_if.addr_list[i].state;
@@ -183,18 +183,17 @@ print_local_addresses(void)
       PRINTF("\n");
     }
   }
+  PRINTF("\x1b[0m");
 }
 
 static void
 create_rpl_dag(uip_ipaddr_t *ipaddr)
 {
   struct uip_ds6_addr *root_if;
-
   root_if = uip_ds6_addr_lookup(ipaddr);
   if(root_if != NULL) {
     rpl_dag_t *dag;
     uip_ipaddr_t prefix;
-    
     rpl_set_root(RPL_DEFAULT_INSTANCE, ipaddr);
     dag = rpl_get_any_dag();
     uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
@@ -221,21 +220,12 @@ init_dtls() {
   };
 
   uip_ipaddr_t ipaddr;
-  /* struct uip_ds6_addr *root_if; */
 
   PRINTF("DTLS server started\n");
 
-/*   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0); */
-/*   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr); */
-/*   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF); */
-
-/*   create_rpl_dag(&ipaddr); */
-/* #else */
-  /* uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF); */
-
-//  uip_ip6addr(&ipaddr, 0xaaaa, 0,0,0,0x0200,0,0,0x0003);
-  uip_ip6addr(&ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+  uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 
   create_rpl_dag(&ipaddr);
 
@@ -254,8 +244,10 @@ PROCESS_THREAD(udp_server_process, ev, data)
 {
   PROCESS_BEGIN();
 
+  PRINTF("\x1b[32m");
   dtls_init();
   init_dtls();
+  PRINTF("\x1b[0m");
 
   print_local_addresses();
   if (!dtls_context) {
@@ -270,8 +262,10 @@ PROCESS_THREAD(udp_server_process, ev, data)
   while(1) {
     PROCESS_WAIT_EVENT();
     if(ev == tcpip_event) {
+      PRINTF("\x1b[32m");
       PRINTF("============================\n");
       dtls_handle_read(dtls_context);
+      PRINTF("\x1b[0m");
     }
 #if 0
     if (bytes_read > 0) {
