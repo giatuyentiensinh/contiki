@@ -4,8 +4,6 @@
 
 #include "dev/serial-line.h"
 
-#include <string.h>
-
 #include "tinydtls.h"
 
 #ifndef DEBUG
@@ -41,6 +39,7 @@ static dtls_context_t *dtls_context;
 static char buf[200];
 static size_t buflen = 0;
 /*---------------------------------------------------------------------------*/
+#ifdef DTLS_ECC
 static const unsigned char ecdsa_priv_key[] = {
 			0x41, 0xC1, 0xCB, 0x6B, 0x51, 0x24, 0x7A, 0x14,
 			0x43, 0x21, 0x43, 0x5B, 0x7A, 0x80, 0xE7, 0x14,
@@ -58,6 +57,7 @@ static const unsigned char ecdsa_pub_key_y[] = {
 			0x5A, 0x3C, 0x78, 0x69, 0x35, 0xA7, 0xCF, 0xAB,
 			0xE9, 0x3F, 0x98, 0x72, 0x09, 0xDA, 0xED, 0x0B,
 			0x4F, 0xAB, 0xC3, 0x6F, 0xC7, 0x72, 0xF8, 0x29};
+#endif
 /*---------------------------------------------------------------------------*/
 static void
 try_send(struct dtls_context_t *ctx, session_t *dst) {
@@ -75,6 +75,7 @@ read_from_peer(struct dtls_context_t *ctx, session_t *session,
 	size_t i;
 	for (i = 0; i < len; i++)
 		PRINTF("%c", data[i]);
+	PRINTF("Data read from peer: %s", data);
 	return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -87,7 +88,9 @@ send_to_peer(struct dtls_context_t *ctx,
 	uip_ipaddr_copy(&conn->ripaddr, &session->addr);
 	conn->rport = session->port;
 
-	PRINTF("send to "); PRINT6ADDR(&conn->ripaddr); PRINTF(":%u\n", uip_ntohs(conn->rport));
+	PRINTF("send to ");
+	PRINT6ADDR(&conn->ripaddr);
+	PRINTF(":%u\n", uip_ntohs(conn->rport));
 
 	uip_udp_packet_send(conn, data, len);
 
@@ -210,9 +213,9 @@ print_local_addresses(void)
 static void
 set_connection_address(uip_ipaddr_t *ipaddr)
 {
-//	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0,0,0,0x0001);
+	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0,0,0,0x0001);
 //	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x0200,0x0000,0x0000,0x0003);
-	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
+//	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x615,0xa974);
 //	uip_ip6addr(ipaddr,0xaaaa,0,0,0,0x212,0x4b00,0x9df,0x4f53);
 }
 /*---------------------------------------------------------------------------*/
@@ -265,14 +268,12 @@ PROCESS_THREAD(udp_server_process, ev, data)
 
 	if (!dtls_context) {
 		dtls_emerg("cannot create context\n");
-		PROCESS_EXIT()
-		;
+		PROCESS_EXIT();
 	}
 	static struct etimer periodic;
 	etimer_set(&periodic, 30 * CLOCK_SECOND);
 	while (1) {
-		PROCESS_YIELD()
-		;
+		PROCESS_YIELD();
 		if (ev == tcpip_event) {
 			PRINTF(ANSI_COLOR_BLUE);
 			PRINTF("==============Recv==============\n");
@@ -305,7 +306,8 @@ PROCESS_THREAD(udp_server_process, ev, data)
 			} else {
 				PRINTF("==============Send==============\n");
 				try_send(dtls_context, &dst);
-			} PRINTF(ANSI_COLOR_RESET);
+			}
+			PRINTF(ANSI_COLOR_RESET);
 		}
 	}
 	PROCESS_END();

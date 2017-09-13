@@ -2,7 +2,7 @@ all: dtls-client dtls-server
 
 CONTIKI=../../..
 
-#CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 APPS += tinydtls/aes tinydtls/sha2 tinydtls/ecc tinydtls
 #APPS += tinydtls/aes  tinydtls/ecc tinydtls
