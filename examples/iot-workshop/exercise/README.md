@@ -1,7 +1,7 @@
 ## Exercise
 
 ### Exercise 1
-Nạp chương trình exercise1 bằng lệnh
+Upload program `exercise1` into RE-Mote by command
 
 ```
 $ make exercise1.upload
@@ -9,63 +9,62 @@ $ make exercise1.upload
 
 ### Exercise 2
 
-- Nạp chương trình border-router vào RE-Mote đóng vai trò là border-router
+- Upload `border-router` program into RE-Mote as the border-router.
 
  ```
  $ cd border-router
  $ make border-router.upload MOTES=/dev/ttyUSB0 && make connect-router PREFIX="bbbb::1/64"
  ```
-- Nạp chương trình client vào RE-Mote đóng vai trò là client.
+- Upload `exercise2` program into RE-Mote 2 as the client.
 
  ```
  $ make exercise2.upload MOTES=/dev/ttyUSB1 && make login MOTES=/dev/ttyUSB1
  ```
 
-- Chạy chương trình UDPServer trên máy tính nối với border-router.
+- Compile and run `UDPServer` program on the computer and connected to the border-router.
 
  ```
  $ javac javacode/*.java && java javacode.UDPServer 
 
  ```
-
-- Cắm sensor `DHT22` vào RE-Mote đóng vai trò là client với chân tín hiệu của sensor ứng với PIN PA5 của RE-Mote. 
+- Plug in `DHT22` sensor into RE-Mote and signal data of sensor maching with PIN PA5 of RE-Mote.
 
 ### Exercise 3
 
-- Nạp chương trình border-router vào RE-Mote đóng vai trò là border-router
+- Upload `border-router` program into RE-Mote as the border-router.
 
  ```
  $ cd border-router
  $ make border-router.upload MOTES=/dev/ttyUSB0 && make connect-router PREFIX="bbbb::1/64"
  ```
-
-- Nạp chương trình coap server vào RE-Mote đóng vai trò là coap server.
+- Upload `coap server` program into RE-Mote as the coap server.
 
  ```
  $ make exercise3.upload MOTES=/dev/ttyUSB1
  ```
  
-- Cắm sensor `DHT22` vào RE-Mote đóng vai trò là client với chân tín hiệu của sensor ứng với PIN PA5 của RE-Mote.
+- Plug in `DHT22` sensor into RE-Mote and signal data of sensor maching with PIN PA5 of RE-Mote.
 
-- Mở trình duyệt và nhập địa chỉ IPv6 của border-router để lấy địa chỉ IPv6 của node chạy coap server. eg: `http://[bbbb::212:4b00:9df:4f53]`. Sau đó gõ địa chỉ của coap server trên trình duyệt firefox (đã có Extension Copper). eg: `coap://[bbbb::212:4b00:615:a974]:5683/iot/contiki-remote`. Tiếp đó enable phần `Debug Control` và trong phần `Accept` gõ `application/json`. Cuối cùng nhấn button `GET` để kiểm tra kết quả.
+- Open browser and enter the IPv6 of the border-router to get IPv6 address of the node running the coap server. eg: `http://[bbbb::212:4b00:9df:4f53]`. And then enter IPv6 of the coap server in `firefox` (Extension Copper available). eg: `coap://[bbbb::212:4b00:615:a974]:5683/iot/contiki-remote`. And then enable `Debug Control` and type `application/json` on `Accept`. Finally, Click `GET` button to check the results.
 
 ### Exercise 4
 
-- Nạp chương trình border-router vào RE-Mote đóng vai trò là border-router
+- Upload `border-router` program into RE-Mote as the border-router.
 
  ```
  $ cd border-router
  $ make border-router.upload MOTES=/dev/ttyUSB0 && make connect-router PREFIX="cccc::1/64"
  ```
-- Nạp chương trình client vào 2 RE-Mote đóng vai trò là client.
+
+- Upload `exercise4` program into 2 RE-Mote as the client.
  
  ```
- $ make exercise2.upload MOTES=/dev/ttyUSB1 && make login MOTES=/dev/ttyUSB1
- $ make exercise2.upload MOTES=/dev/ttyUSB2 && make login MOTES=/dev/ttyUSB2
+ $ make exercise4.upload MOTES=/dev/ttyUSB1 && make login MOTES=/dev/ttyUSB1
+ $ make exercise4.upload MOTES=/dev/ttyUSB2 && make login MOTES=/dev/ttyUSB2
  ```
 
-- Thiết lập topology đa chặng như bài lesson 4 trong tài liệu.
-- Chạy chương trình UDPServer trên máy tính nối với border-router.
+- Set up multi-hop topology like lesson 4 in the document.
+- Compile and run `UDPServer` program on the computer and connected to the border-router.
 
  ```
  $ javac javacode/*.java && java javacode.UDPServer 
