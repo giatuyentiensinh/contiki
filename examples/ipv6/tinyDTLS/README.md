@@ -32,5 +32,18 @@ $ make dtls-server.upload MOTES=/dev/ttyUSB0 && make login MOTES=/dev/ttyUSB0
 $ make dtls-client.upload MOTES=/dev/ttyUSB1 && make login MOTES=/dev/ttyUSB1
 ```
 
+### Tip show log to console and then, save to file
+`<command> |& tee  <outputFile>`
+
+### 6lbr Mapping
+
+| Module HR911105A | RE-Mote |
+|---|---|
+| VCC | 5V |
+| GNC | GND |
+| SCL | SCLK1 |
+| CS | GPA7 |
+| S0 | MOS01 |
+| S1 | MOSI1 |
 
 # Auth Tuyenng
