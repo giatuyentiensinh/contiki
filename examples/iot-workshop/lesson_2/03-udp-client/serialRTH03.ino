@@ -5,8 +5,10 @@ RHT03 rht;
 
 void setup() {
   Serial.begin(115200); // Serial is used to print sensor readings.
+  Serial1.begin(115200); // Serial is used to print sensor readings.
   // Call rht.begin() to initialize the sensor and our data pin
   rht.begin(RHT03_DATA_PIN); 
+  Serial.println("Arduino starting...");
 }
 
 void loop()
@@ -21,7 +23,8 @@ void loop()
     // value 
     float latestHumidity = rht.humidity();
     float latestTempC = rht.tempC();
-    Serial.println("Humidity: '" + String(latestHumidity, 3) + "' %, " + "Temp (C): '" + String(latestTempC, 3) + "' deg C");
+    Serial.println("Humidity: '" + String(latestHumidity, 2) + "' %, " + "Temp (C): '" + String(latestTempC, 2) + "' deg C");
+    Serial1.println("Humidity: '" + String(latestHumidity, 2) + "' %, " + "Temp (C): '" + String(latestTempC, 2) + "' deg C");
   }
   else {
     // If the update failed, try delaying for RHT_READ_INTERVAL_MS ms before
